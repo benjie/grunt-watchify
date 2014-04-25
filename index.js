@@ -10,13 +10,13 @@
 
 var fs         = require('fs');
 var browserify = require('browserify');
+var watch = require('chokidar').watch;
 
 module.exports = function (opts, gruntCb) {
   var b          = gruntCb(browserify(opts));
   var cache      = {};
   var pkgcache   = {};
   var watching   = {};
-  var lastUpdate = 0;
 
   b.on('package', function (file, pkg) {
     pkgcache[file] = pkg;
@@ -29,15 +29,18 @@ module.exports = function (opts, gruntCb) {
     watching[dep.id] = true;
     cache[dep.id] = dep;
 
-    fs.watch(dep.id, function() {
+    var fw = watch(dep.id, {persistent: true});
+    fw.on('change', function(event, filename) {
+      if (!fw) return;
+      fw.close()
+      fw = null;
       delete cache[dep.id];
       watching[dep.id] = false;
 
       var now = Date.now();
-      if (now - lastUpdate > 2000) {
+      setTimeout(function(){
         b.emit('update');
-        lastUpdate = now;
-      }
+      }, 0);
     });
   });
 

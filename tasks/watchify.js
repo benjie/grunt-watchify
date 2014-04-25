@@ -42,7 +42,15 @@ module.exports = function(grunt) {
         opts      = _.pick(options, 'detectGlobals', 'insertGlobals', 'debug', 'standalone');
 
 
+    var inProgress = false, again = false;
     var bundle = function bundle() {
+      if (inProgress) {
+        again = true;
+        return;
+      }
+      again = false;
+      inProgress = true;
+
       var wb          = w.bundle(opts),
           writeStream = fs.createWriteStream(dotfile);
 
@@ -58,6 +66,10 @@ module.exports = function(grunt) {
           }
           if (!keepAlive) {
             done();
+          }
+          inProgress = false;
+          if (again) {
+            bundle();
           }
         });
       });

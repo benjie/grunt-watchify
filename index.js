@@ -30,17 +30,9 @@ module.exports = function (opts, gruntCb) {
     cache[dep.id] = dep;
 
     var fw = watch(dep.id, {persistent: true});
-    var timeout;
     fw.on('change', function(event, filename) {
       delete cache[dep.id];
-      if (timeout) {
-        return;
-      }
-      // Lazy debounce
-      timeout = setTimeout(function(){
-        timeout = null;
-        b.emit('update');
-      }, 0);
+      b.emit('update');
     });
   });
 

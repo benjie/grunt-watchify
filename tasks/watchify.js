@@ -42,37 +42,44 @@ module.exports = function(grunt) {
         opts      = _.pick(options, 'detectGlobals', 'insertGlobals', 'debug', 'standalone');
 
 
-    var inProgress = false, again = false;
+    var inProgress = false, again = false, timer;
     var bundle = function bundle() {
       if (inProgress) {
         again = true;
         return;
       }
-      again = false;
-      inProgress = true;
+      if (timer) {
+        return;
+      }
+      // Lazy debounce
+      timer = setTimeout(function() {
+        again = false;
+        inProgress = true;
+        timer = null;
 
-      var wb          = w.bundle(opts),
-          writeStream = fs.createWriteStream(dotfile);
+        var wb          = w.bundle(opts),
+            writeStream = fs.createWriteStream(dotfile);
 
-      wb.pipe(writeStream, {end: false});
-      wb.on('error', function (err) {
-        grunt.fail.warn(err);
-      });
-      wb.on('end', function() {
-        writeStream.end();
-        fs.rename(dotfile, outfile, function (err) {
-          if (err) {
-            grunt.fail.warn(err);
-          }
-          if (!keepAlive) {
-            done();
-          }
-          inProgress = false;
-          if (again) {
-            bundle();
-          }
+        wb.pipe(writeStream, {end: false});
+        wb.on('error', function (err) {
+          grunt.fail.warn(err);
         });
-      });
+        wb.on('end', function() {
+          writeStream.end();
+          fs.rename(dotfile, outfile, function (err) {
+            if (err) {
+              grunt.fail.warn(err);
+            }
+            if (!keepAlive) {
+              done();
+            }
+            inProgress = false;
+            if (again) {
+              bundle();
+            }
+          });
+        });
+      }, 50);
     };
 
     var files = [];

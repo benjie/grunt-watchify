@@ -60,24 +60,30 @@ module.exports = function(grunt) {
         var wb          = w.bundle(opts),
             writeStream = fs.createWriteStream(dotfile);
 
+        function finish(err) {
+          if (writeStream) {
+            writeStream.end();
+            writeStream = null;
+          }
+          if (err) {
+            grunt.fail.warn(err);
+          }
+          if (!keepAlive) {
+            done(err);
+          }
+          inProgress = false;
+          if (again) {
+            bundle();
+          }
+        }
+
         wb.pipe(writeStream, {end: false});
-        wb.on('error', function (err) {
-          grunt.fail.warn(err);
-        });
+        wb.on('error', finish);
         wb.on('end', function() {
+          if (!writeStream) return;
           writeStream.end();
-          fs.rename(dotfile, outfile, function (err) {
-            if (err) {
-              grunt.fail.warn(err);
-            }
-            if (!keepAlive) {
-              done();
-            }
-            inProgress = false;
-            if (again) {
-              bundle();
-            }
-          });
+          writeStream = null;
+          fs.rename(dotfile, outfile, finish);
         });
       }, 50);
     };
